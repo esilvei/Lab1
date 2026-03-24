@@ -1,0 +1,10 @@
+[project]
+name = "lab1"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "kagglehub>=1.0.0",
+    "matplotlib>=3.10.8",
+    "opencv-python>=4.13.0.92",
+]

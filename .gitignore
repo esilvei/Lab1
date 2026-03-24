@@ -1,0 +1,23 @@
+# IDEs
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+uv.lock
+
+# Pastas de Dados
+data/
+
+# Mídia (
+*.mp4
+*.jpg
+*.jpeg
+*.png
+
+# Arquivos da FPGA que serão gerados depois
+*.mif
