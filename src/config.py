@@ -1,19 +1,17 @@
 import os
 from pathlib import Path
 
-
 class Config:
     _instance = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(Config, cls).__new__(cls)
-            cls._instance._init_config()
+            cls._instance._init_paths()
         return cls._instance
 
-    def _init_config(self):
+    def _init_paths(self):
         self.PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
         self.DATA_DIR = self.PROJECT_ROOT / "data"
         self.RAW_DIR = self.DATA_DIR / "raw"
         self.INTERIM_DIR = self.DATA_DIR / "interim"
@@ -21,16 +19,15 @@ class Config:
 
         self.RAW_AUTORIZADO_DIR = self.RAW_DIR / "1_autorizado"
         self.INTERIM_AUTORIZADO_DIR = self.INTERIM_DIR / "1_autorizado"
-
         self.NEGADOS_INTERIM_DIR = self.INTERIM_DIR / "0_desconhecido"
-        self.NEGADOS_PROCESSED_DIR = self.PROCESSED_DIR / "0_desconhecido"
 
         self.IMG_SIZE = 32
+        self.CHANNELS = 1
 
-        self.RAW_DIR.mkdir(parents=True, exist_ok=True)
-        self.RAW_AUTORIZADO_DIR.mkdir(parents=True, exist_ok=True)
-        self.INTERIM_DIR.mkdir(parents=True, exist_ok=True)
-        self.INTERIM_AUTORIZADO_DIR.mkdir(parents=True, exist_ok=True)
-        self.NEGADOS_INTERIM_DIR.mkdir(parents=True, exist_ok=True)
-        self.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-        self.NEGADOS_PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    def setup_directories(self):
+        dirs = [
+            self.RAW_DIR, self.INTERIM_DIR, self.PROCESSED_DIR,
+            self.RAW_AUTORIZADO_DIR, self.INTERIM_AUTORIZADO_DIR, self.NEGADOS_INTERIM_DIR
+        ]
+        for d in dirs:
+            d.mkdir(parents=True, exist_ok=True)

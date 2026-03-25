@@ -12,12 +12,15 @@ uv.lock
 
 # Pastas de Dados
 data/
+tuner_logs/
+models/
+mlruns/
 
-# Mídia (
+# Mídia
 *.mp4
 *.jpg
 *.jpeg
 *.png
-
-# Arquivos da FPGA que serão gerados depois
+*.db
+# Arquivos da FPGA
 *.mif

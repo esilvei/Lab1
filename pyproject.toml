@@ -5,6 +5,11 @@ description = "Add your description here"
 requires-python = ">=3.12"
 dependencies = [
     "kagglehub>=1.0.0",
+    "keras-tuner>=1.4.8",
     "matplotlib>=3.10.8",
+    "mlflow>=3.10.1",
     "opencv-python>=4.13.0.92",
+    "seaborn>=0.13.2",
+    "tensorboard>=2.20.0",
+    "tensorflow>=2.21.0",
 ]
