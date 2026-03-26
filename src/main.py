@@ -19,7 +19,6 @@ os.environ['OPENCV_LOG_LEVEL'] = 'OFF'
 
 
 def main():
-    # Inicialização dos componentes seguindo os princípios SOLID
     cfg = Config()
     extractor = DataExtractor()
     img_processor = ImageProcessor(cfg.IMG_SIZE)
@@ -48,20 +47,17 @@ def main():
         shutil.copytree(lfw_download_path, lfw_raw_folder)
 
     # 2. PRÉ-PROCESSAMENTO (Raw -> Interim)
-    # Limpa execuções anteriores para evitar contaminação
     data_preprocessor.clear_interim()
 
     # Processa fotos/vídeos da equipe (Classe 1)
     data_preprocessor.process_authorized(max_fotos=800)
 
     # Processa minerando faces do LFW e Selfies (Classe 0)
-    # Ratio 3.0 para garantir que a rede aprenda a negar com segurança
     data_preprocessor.process_unknowns(ratio=5.0, num_fundos=500)
 
     # 3. ORGANIZAÇÃO DO DATASET (Interim -> Processed)
     print("\n[PASSO 3] Organizando Dataset (Split Treino/Validação/Teste)...")
     ds_manager.clean_processed()
-    # Distribui arquivos respeitando a proporção 80/10/10
     ds_manager.split_data(list(cfg.NEGADOS_INTERIM_DIR.glob("*.jpg")), "0_desconhecido")
     ds_manager.split_data(list(cfg.INTERIM_AUTORIZADO_DIR.rglob("*.jpg")), "1_autorizado")
 

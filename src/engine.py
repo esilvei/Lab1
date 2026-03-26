@@ -13,7 +13,6 @@ class ModelEngine:
     def __init__(self, config, model_builder):
         self.cfg = config
         self.model_builder = model_builder
-        # Configuração do rastreio de experiências
         mlflow.set_tracking_uri("sqlite:///mlruns.db")
         mlflow.set_experiment("Fechadura_Biometrica_Otimizada")
 
@@ -43,13 +42,10 @@ class ModelEngine:
     def train(self):
         train_gen, val_gen = self.get_generators()
 
-        # OTIMIZAÇÃO: Pesos Manuais na Loss (Proporção sugerida para segurança)
         # Classe 0 (Desconhecido): Peso 1.0
-        # Classe 1 (Autorizado): Peso 4.0 -> Dá 4x mais importância ao acerto da equipa
+        # Classe 1 (Autorizado): Peso 4.0
         cw = {0: 1.0, 1: 4.0}
-        print(f"\n[ENGINE] Aplicando pesos manuais para priorizar Autorizados: {cw}")
 
-        # OTIMIZAÇÃO: Busca mais profunda (max_epochs de 15 para 20)
         tuner = kt.Hyperband(
             self.model_builder,
             objective='val_accuracy',
@@ -60,7 +56,6 @@ class ModelEngine:
         )
 
         with mlflow.start_run(run_name="Optimized_Training_V4"):
-            # OTIMIZAÇÃO: Maior paciência na fase de busca (patience=10)
             stop_search = tf.keras.callbacks.EarlyStopping(
                 monitor='val_loss',
                 patience=10
@@ -69,7 +64,6 @@ class ModelEngine:
             print("\n[PASSO 4.1] Iniciando busca de hiperparâmetros (Dropout, LR, Units)...")
             tuner.search(train_gen, validation_data=val_gen, callbacks=[stop_search])
 
-            # Recupera o melhor modelo e hiperparâmetros
             best_hps = tuner.get_best_hyperparameters()[0]
             model = tuner.hypermodel.build(best_hps)
 

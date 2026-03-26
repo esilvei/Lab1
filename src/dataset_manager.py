@@ -7,7 +7,7 @@ class DatasetManager:
         self.cfg = config
         random.seed(42)
 
-    def split_data(self, files, class_name, ratios=(0.8, 0.1, 0.1)):
+    def split_data(self, files, class_name, ratios=(0.7, 0.1, 0.2)):
         random.shuffle(files)
         n = len(files)
         train_idx = int(n * ratios[0])
