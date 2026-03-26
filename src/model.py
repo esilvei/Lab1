@@ -39,7 +39,12 @@ def build_tiny_cnn(hp):
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=hp_lr),
         loss='binary_crossentropy',
-        metrics=['accuracy']
+        metrics=[
+            keras.metrics.BinaryAccuracy(name='accuracy'),
+            keras.metrics.Precision(name='precision'),
+            keras.metrics.Recall(name='recall'),
+            keras.metrics.FalsePositives(name='fp')
+        ]
     )
 
     return model

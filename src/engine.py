@@ -42,36 +42,31 @@ class ModelEngine:
     def train(self):
         train_gen, val_gen = self.get_generators()
 
-        # Classe 0 (Desconhecido): Peso 1.0
-        # Classe 1 (Autorizado): Peso 4.0
         cw = {0: 1.0, 1: 4.0}
 
         tuner = kt.Hyperband(
             self.model_builder,
-            objective='val_accuracy',
+            objective=kt.Objective('val_precision', direction='max'),
             max_epochs=20,
             factor=3,
             directory='tuner_logs',
             project_name='tiny_cnn_fine_tuning'
         )
 
-        with mlflow.start_run(run_name="Optimized_Training_V4"):
+        with mlflow.start_run(run_name="Optimized_Training_Precision"):
             stop_search = tf.keras.callbacks.EarlyStopping(
                 monitor='val_loss',
                 patience=10
             )
 
-            print("\n[PASSO 4.1] Iniciando busca de hiperparâmetros (Dropout, LR, Units)...")
+            print("\n[PASSO 4.1] Iniciando busca (Objetivo: MAX val_precision)...")
             tuner.search(train_gen, validation_data=val_gen, callbacks=[stop_search])
 
             best_hps = tuner.get_best_hyperparameters()[0]
             model = tuner.hypermodel.build(best_hps)
 
-            # Registo automático no MLflow
             mlflow.keras.autolog(log_models=True)
 
-            # OTIMIZAÇÃO: Treino final com paciência estendida (patience=15) e mais épocas
-            # Isso permite que a rede pequena saia de plateaus de perda.
             print("\n[PASSO 4.2] Iniciando ajuste fino do modelo final...")
             history = model.fit(
                 train_gen,
@@ -79,13 +74,12 @@ class ModelEngine:
                 epochs=50,
                 class_weight=cw,
                 callbacks=[tf.keras.callbacks.EarlyStopping(
-                    monitor='val_loss',
+                    monitor='val_loss', # Loss geral ajuda a evitar overfitting
                     patience=15,
                     restore_best_weights=True
                 )]
             )
 
-            # Salvamento do modelo final para exportação
             model_path = self.cfg.PROJECT_ROOT / "models" / "tiny_cnn_binaria_final.h5"
             model.save(str(model_path))
             print(f" -> Modelo final guardado em: {model_path}")
