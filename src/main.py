@@ -53,7 +53,7 @@ def main():
     data_preprocessor.process_authorized(max_fotos=800)
 
     # Processa minerando faces do LFW e Selfies (Classe 0)
-    data_preprocessor.process_unknowns(ratio=3.0, num_fundos=500)
+    data_preprocessor.process_unknowns(ratio=1.5)
 
     # 3. ORGANIZAÇÃO DO DATASET (Interim -> Processed)
     print("\n[PASSO 3] Organizando Dataset (Split Treino/Validação/Teste)...")

@@ -43,8 +43,10 @@ def export_model_to_mif():
     model = tf.keras.models.load_model(str(model_path))
     exporter = MIFExporter()
     print("\n[MIF] Iniciando exportação dos pesos quantizados...")
-    for layer in model.layers:
-        weights = layer.get_weights()
-        if not weights: continue
-        exporter.generate_mif(weights[0], f"{layer.name}_weights")
-        exporter.generate_mif(weights[1], f"{layer.name}_biases")
+
+    all_values = np.concatenate([
+        w.flatten()
+        for layer in model.layers
+        for w in layer.get_weights()
+    ])
+    exporter.generate_mif(all_values, "all_weights")

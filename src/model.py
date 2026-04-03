@@ -24,14 +24,6 @@ def build_tiny_cnn(hp):
     hp_dropout = hp.Choice('dropout', values=[0.2, 0.3, 0.4, 0.5])
     model.add(layers.Dropout(rate=hp_dropout))
 
-    hp_units = hp.Choice('dense_units', values=[16, 32, 48, 64])
-    model.add(layers.Dense(
-        units=hp_units,
-        activation='relu',
-        kernel_initializer='he_normal',
-        kernel_regularizer=regularizers.l2(hp_l2)
-    ))
-
     model.add(layers.Dense(1, activation='sigmoid'))
 
     hp_lr = hp.Choice('learning_rate', values=[1e-3, 5e-4, 1e-4])
@@ -43,7 +35,7 @@ def build_tiny_cnn(hp):
             keras.metrics.BinaryAccuracy(name='accuracy'),
             keras.metrics.Precision(name='precision'),
             keras.metrics.Recall(name='recall'),
-            keras.metrics.FalsePositives(name='fp')
+            keras.metrics.AUC(name='auc')
         ]
     )
 
