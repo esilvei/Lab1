@@ -135,11 +135,11 @@ class DataPreprocessor:
                     cv2.imwrite(str(dest / f"aug_{i:04d}.jpg"),
                                 self.processor.apply_augmentation(random.choice(rostos)))
 
-    def process_unknowns(self, ratio=3.0, num_fundos=300):
+    def process_unknowns(self, ratio=1.5):
         """Processa Selfies + LFW e aplica Augmentation para robustez da Classe 0."""
         print("\n[PREPROCESS] Processando Desconhecidos (Classe 0)...")
         total_auth = len(list(self.cfg.INTERIM_AUTORIZADO_DIR.rglob("*.jpg")))
-        meta = int(total_auth * ratio) - num_fundos
+        meta = int(total_auth * ratio)
 
         image_paths = []
         for d in [self.cfg.RAW_DIR / "selfies", self.cfg.RAW_DIR / "lfw_extracted"]:
@@ -167,7 +167,3 @@ class DataPreprocessor:
                         count += 1
             except (cv2.error, OSError):
                 continue
-
-        for i in range(num_fundos):
-            cv2.imwrite(str(self.cfg.NEGADOS_INTERIM_DIR / f"fundo_{i:04d}.jpg"),
-                        self.processor.generate_synthetic_background())
