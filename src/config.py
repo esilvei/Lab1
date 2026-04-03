@@ -22,6 +22,8 @@ class Config:
         self.INTERIM_AUTORIZADO_DIR = self.INTERIM_DIR / "1_autorizado"
         self.NEGADOS_INTERIM_DIR = self.INTERIM_DIR / "0_desconhecido"
 
+        self.TUNER_LOGS_DIR = self.PROJECT_ROOT / "tuner_logs"
+
         self.IMG_SIZE = 32
         self.CHANNELS = 1
 

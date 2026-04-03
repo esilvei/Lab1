@@ -13,6 +13,10 @@ class FechaduraBiometricaPipeline:
     """
 
     def __init__(self, model_path: str, img_size: int = 32, threshold: float = 0.5):
+        # AVISO: O 'threshold' ideal não necessariamente é 0.5.
+        # Após treinar otimizando AUC, deve-se gerar a Curva ROC de Validação
+        # E definir o threshold exato (ex: 0.65) onde o False Positive Rate chega a 0%
+        # Mas mantendo o True Positive Rate alto o suficiente para os alunos.
         if not Path(model_path).exists():
             raise FileNotFoundError(f"Modelo não encontrado em: {model_path}")
 

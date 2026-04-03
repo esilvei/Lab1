@@ -69,22 +69,6 @@ class ImageProcessor:
         beta = random.randint(-20, 20)
         return cv2.convertScaleAbs(img_aug, alpha=alpha, beta=beta)
 
-    def generate_synthetic_background(self):
-        """Gera fundos para a Classe 0 para evitar falsos positivos com paredes[cite: 8]."""
-        cor_base = random.randint(40, 230)
-        imagem = np.full((self.img_size, self.img_size), cor_base, dtype=np.float32)
-
-        # Gradientes para simular paredes e iluminação linear
-        tipo_grad = random.choice(['horizontal', 'vertical', 'nenhum'])
-        if tipo_grad != 'nenhum':
-            luz = random.uniform(-40, 40)
-            grad = np.linspace(0, luz, self.img_size)
-            imagem = imagem + (grad if tipo_grad == 'horizontal' else grad[:, np.newaxis])
-
-        ruido = np.random.normal(0, random.uniform(2.0, 15.0), (self.img_size, self.img_size))
-        return np.clip(imagem + ruido, 0, 255).astype(np.uint8)
-
-
 class DataPreprocessor:
     """Orquestrador modular para processamento de dados Autorizados e Desconhecidos."""
 
@@ -138,13 +122,15 @@ class DataPreprocessor:
                     cv2.imwrite(str(dest / f"aug_{i:04d}.jpg"),
                                 self.processor.apply_augmentation(random.choice(rostos)))
 
-    def process_unknowns(self, ratio=3.0, num_fundos=300):
-        """Processa Selfies + LFW e aplica Augmentation para robustez da Classe 0[cite: 8, 19]."""
+    def process_unknowns(self, ratio=1.5):
+        """Processa Selfies + LFW e aplica Augmentation.
+           Focamos em usar APENAS as faces do LFW/Selfies como 'Hard Negatives'.
+        """
         print("\n[PREPROCESS] Processando Desconhecidos (Classe 0)...")
         total_auth = len(list(self.cfg.INTERIM_AUTORIZADO_DIR.rglob("*.jpg")))
-        meta = int(total_auth * ratio) - num_fundos
+        meta = int(total_auth * ratio)
 
-        # Suporte ao LFW e Selfies minerados recursivamente [cite: 19]
+        # Suporte ao LFW e Selfies minerados recursivamente 
         image_paths = []
         for d in [self.cfg.RAW_DIR / "selfies", self.cfg.RAW_DIR / "lfw_extracted"]:
             if d.exists():
@@ -173,7 +159,3 @@ class DataPreprocessor:
             except (cv2.error, OSError):
                 continue
 
-        # Geração de fundos sintéticos para reduzir falsos positivos com objetos estáticos [cite: 8]
-        for i in range(num_fundos):
-            cv2.imwrite(str(self.cfg.NEGADOS_INTERIM_DIR / f"fundo_{i:04d}.jpg"),
-                        self.processor.generate_synthetic_background())

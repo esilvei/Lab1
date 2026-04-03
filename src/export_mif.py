@@ -18,15 +18,21 @@ class MIFExporter:
             fixed_val = (1 << self.bit_width) + fixed_val
         return format(fixed_val, f'0{self.bit_width // 4}X')
 
-    def generate_mif(self, data, filename):
-        flat_data = data.flatten()
+    def generate_single_mif(self, model, filename="model_weights"):
+        all_weights = []
+        for layer in model.layers:
+            weights = layer.get_weights()
+            if not weights: continue
+            all_weights.append(weights[0].flatten())
+            all_weights.append(weights[1].flatten())
+        
+        flat_data = np.concatenate(all_weights)
         mif_content = [
             f"DEPTH = {len(flat_data)};",
             f"WIDTH = {self.bit_width};",
             "ADDRESS_RADIX = HEX;",
             "DATA_RADIX = HEX;",
             "CONTENT BEGIN",
-            ""
         ]
         for addr, val in enumerate(flat_data):
             mif_content.append(f"{addr:X} : {self.to_fixed_point(val)};")
@@ -42,9 +48,5 @@ def export_model_to_mif():
     if not model_path.exists(): return
     model = tf.keras.models.load_model(str(model_path))
     exporter = MIFExporter()
-    print("\n[MIF] Iniciando exportação dos pesos quantizados...")
-    for layer in model.layers:
-        weights = layer.get_weights()
-        if not weights: continue
-        exporter.generate_mif(weights[0], f"{layer.name}_weights")
-        exporter.generate_mif(weights[1], f"{layer.name}_biases")
+    print("\n[MIF] Iniciando exportação dos pesos quantizados num único arquivo...")
+    exporter.generate_single_mif(model, "all_weights")

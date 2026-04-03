@@ -53,10 +53,10 @@ def main():
     data_preprocessor.process_authorized(max_fotos=800)
 
     # Processa minerando faces do LFW e Selfies (Classe 0)
-    data_preprocessor.process_unknowns(ratio=5.0, num_fundos=500)
+    data_preprocessor.process_unknowns(ratio=1.5)
 
-    # 3. ORGANIZAÇÃO DO DATASET (Interim -> Processed)
-    print("\n[PASSO 3] Organizando Dataset (Split Treino/Validação/Teste)...")
+    # 3. ORGANIZA‡ƒO DO DATASET (Interim -> Processed)
+    print("\n[PASSO 3] Organizando Dataset (Split Treino/Validao/Teste)...")
     ds_manager.clean_processed()
     ds_manager.split_data(list(cfg.NEGADOS_INTERIM_DIR.glob("*.jpg")), "0_desconhecido")
     ds_manager.split_data(list(cfg.INTERIM_AUTORIZADO_DIR.rglob("*.jpg")), "1_autorizado")

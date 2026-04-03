@@ -9,7 +9,9 @@ dependencies = [
     "matplotlib>=3.10.8",
     "mlflow>=3.10.1",
     "opencv-python>=4.13.0.92",
+    "pandas-stubs==3.0.0.260204",
     "seaborn>=0.13.2",
+    "tabulate>=0.10.0",
     "tensorboard>=2.20.0",
     "tensorflow>=2.21.0",
 ]
