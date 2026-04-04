@@ -26,6 +26,9 @@ class Config:
 
         self.IMG_SIZE = 32
         self.CHANNELS = 1
+        
+        # Flag para controlar se fazemos busca de hiperparâmetros ou se treinamos direto com os melhores conhecidos
+        self.RUN_HYPERPARAMETER_SEARCH = False
 
     def setup_directories(self):
         dirs = [

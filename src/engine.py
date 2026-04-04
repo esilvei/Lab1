@@ -20,11 +20,8 @@ class TinyCNNHyperModel(kt.HyperModel):
         return self.model_builder(hp)
 
     def fit(self, hp, model, *args, **kwargs):
-        # A punição dupla (2.0) e intermediária (1.5) dominou o ranking vs a proporção neutra (1.0).
-        # Vamos focar essa faixa de restrição para Falsos Positivos.
-        pena_invasor = hp.Choice('peso_classe_0', values=[1.5, 2.0, 2.5])
-        
-        # Reescreve o dicionário antes de passar pro Keras model.fit() original
+        pena_invasor = hp.Choice('peso_classe_0', values=[1.5, 2.5])
+
         cw_tunado = {
             0: self.base_class_weight[0] * pena_invasor,
             1: self.base_class_weight[1]
@@ -50,7 +47,7 @@ class ModelEngine:
         train_gen = ImageDataGenerator(
             rescale=1. / 255,
             rotation_range=10,
-            brightness_range=[0.6, 1.4], # Simulação de iluminação ambiente do laboratório
+            brightness_range=[0.6, 1.4], # Simulação de iluminação ambiente variada
             horizontal_flip=True
         )
         val_gen = ImageDataGenerator(rescale=1. / 255)
@@ -78,65 +75,99 @@ class ModelEngine:
         from sklearn.utils import class_weight
         train_gen, val_gen = self.get_generators()
 
-        # Calcula automaticamente os pesos base usando a proporção do dataset
         labels = train_gen.classes
         weights = class_weight.compute_class_weight('balanced', classes=np.unique(labels), y=labels)
         base_cw = dict(enumerate(weights))
 
-        # Passamos a nossa classe Especial para que os pesos sejam tunados dentro dela
-        hypermodel_wrapper = TinyCNNHyperModel(self.model_builder, base_cw)
+        if self.cfg.RUN_HYPERPARAMETER_SEARCH:
+            hypermodel_wrapper = TinyCNNHyperModel(self.model_builder, base_cw)
 
-        # A rede possui pouquíssimos parâmetros. O RandomSearch avalia todo o horizonte da trial.
-        tuner = kt.RandomSearch(
-            hypermodel_wrapper,
-            objective=kt.Objective('val_auc', direction='max'),
-            max_trials=16, # Busca aleatória com profundidade suficiente do espaço de combinações
-            directory=str(self.cfg.PROJECT_ROOT / 'tuner_logs'),
-            project_name='tiny_cnn_search',
-            overwrite=False # Mantém os dados da busca para análises futuras
-        )
-
-        with mlflow.start_run(run_name="Optimized_Training_AUC"):
-            stop_search = tf.keras.callbacks.EarlyStopping(
-                monitor='val_auc',
-                mode='max',
-                patience=20 # Dobrando a paciência para que as LRs baixinhas tenham tempo de mostrar seu potencial antes de serem cortadas.
+            tuner = kt.RandomSearch(
+                hypermodel_wrapper,
+                objective=kt.Objective('val_auc', direction='max'),
+                max_trials=4,
+                directory=str(self.cfg.PROJECT_ROOT / 'tuner_logs'),
+                project_name='tiny_cnn_search',
+                overwrite=False
             )
 
-            print("\n[PASSO 4.1] Iniciando busca (Objetivo: MAX val_auc para separabilidade)...")
-            # Aumentamos as épocas para 100 limitando estritamente a janela de generalização no longo prazo.
-            tuner.search(train_gen, validation_data=val_gen, epochs=100, callbacks=[stop_search])
+            with mlflow.start_run(run_name="Optimized_Training_AUC"):
+                stop_search = tf.keras.callbacks.EarlyStopping(
+                    monitor='val_auc',
+                    mode='max',
+                    patience=20 # Dobrando a paciência para que as LRs baixinhas tenham tempo de mostrar seu potencial antes de serem cortadas.
+                )
 
-            best_hps = tuner.get_best_hyperparameters()[0]
-            model = tuner.hypermodel.build(best_hps)
+                print("\n[PASSO 4.1] Iniciando busca (Objetivo: MAX val_auc para separabilidade)...")
+                tuner.search(train_gen, validation_data=val_gen, epochs=200, callbacks=[stop_search])
 
-            # Imprime as informações dos parâmetros vencendores escolhidos (incluindo o peso testado)
+                best_hps = tuner.get_best_hyperparameters()[0]
+                model = tuner.hypermodel.build(best_hps)
+
+                peso_escolhido = best_hps.get('peso_classe_0')
+                print(f" -> O Tuner determinou o multiplicador de punição: {peso_escolhido}x para Desconhecidos.")
+                
+                cw_final = {
+                    0: base_cw[0] * peso_escolhido,
+                    1: base_cw[1]
+                }
+
+                mlflow.keras.autolog(log_models=True)
+
+                print("\n[PASSO 4.2] Iniciando ajuste fino do modelo final usando a melhor arquitetura encontrada...")
+                history = model.fit(
+                    train_gen, 
+                    validation_data=val_gen, 
+                    epochs=200,
+                    class_weight=cw_final, # Passando o peso vitorioso dinâmico para o treino final
+                    callbacks=[tf.keras.callbacks.EarlyStopping(
+                        monitor='val_auc', # Alteramos para early stop monitorar o AUC garantindo que grave o ápice de separabilidade
+                        mode='max',
+                        patience=20,
+                        restore_best_weights=True
+                    )]
+                )
+
+                model_path = self.cfg.PROJECT_ROOT / "models" / "tiny_cnn_binaria_final.h5"
+                model.save(str(model_path))
+                print(f" -> Modelo final guardado em: {model_path}")
+
+            return history, model
+        else:
+            print("\n[PASSO 4.1] Busca de Hiperparmetros desativada. Utilizando os melhores parmetros fixos (L2=0, Drop=0.3, Adam 0.001, PesoC0 1.5)...")
+            best_hps = kt.HyperParameters()
+            best_hps.Fixed('l2_reg', 0.0)
+            best_hps.Fixed('dropout', 0.3)
+            best_hps.Fixed('learning_rate', 0.001)
+            best_hps.Fixed('optimizer', 'adam')
+            best_hps.Fixed('peso_classe_0', 1.5)
+
+            model = self.model_builder(best_hps)
             peso_escolhido = best_hps.get('peso_classe_0')
-            print(f" -> O Tuner determinou o multiplicador de punição: {peso_escolhido}x para Desconhecidos.")
-            
             cw_final = {
                 0: base_cw[0] * peso_escolhido,
                 1: base_cw[1]
             }
 
-            mlflow.keras.autolog(log_models=True)
+            with mlflow.start_run(run_name="Training_Top_HPs"):
+                mlflow.keras.autolog(log_models=True)
 
-            print("\n[PASSO 4.2] Iniciando ajuste fino do modelo final usando a melhor arquitetura encontrada...")
-            history = model.fit(
-                train_gen, 
-                validation_data=val_gen, 
-                epochs=100,
-                class_weight=cw_final, # Passando o peso vitorioso dinâmico para o treino final
-                callbacks=[tf.keras.callbacks.EarlyStopping(
-                    monitor='val_auc', # Alteramos para early stop monitorar o AUC garantindo que grave o ápice de separabilidade
-                    mode='max',
-                    patience=20,
-                    restore_best_weights=True
-                )]
-            )
+                print("\n[PASSO 4.2] Iniciando treinamento do modelo direto com os hiperparmetros ttimos...")
+                history = model.fit(
+                    train_gen, 
+                    validation_data=val_gen, 
+                    epochs=200,
+                    class_weight=cw_final,
+                    callbacks=[tf.keras.callbacks.EarlyStopping(
+                        monitor='val_auc',
+                        mode='max',
+                        patience=20,
+                        restore_best_weights=True
+                    )]
+                )
 
-            model_path = self.cfg.PROJECT_ROOT / "models" / "tiny_cnn_binaria_final.h5"
-            model.save(str(model_path))
-            print(f" -> Modelo final guardado em: {model_path}")
+                model_path = self.cfg.PROJECT_ROOT / "models" / "tiny_cnn_binaria_final.h5"
+                model.save(str(model_path))
+                print(f" -> Modelo final guardado em: {model_path}")
 
-        return history, model
+            return history, model
