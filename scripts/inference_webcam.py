@@ -1,20 +1,31 @@
 import cv2
 import numpy as np
 import tensorflow as tf
+import json
 from src.config import Config
 from src.preprocessor import ImageProcessor
+from src.model_io import load_tinycnn_model
 
 cfg = Config()
 
 def iniciar_inferencia():
     # 1. Carrega o modelo final
-    model_path = cfg.PROJECT_ROOT / "models" / "tiny_cnn_binaria_final.h5"
+    model_path = cfg.MODEL_PATH
     if not model_path.exists():
         print(f"Erro Crítico: Modelo não encontrado em {model_path}")
         return
 
-    model = tf.keras.models.load_model(str(model_path))
+    model = load_tinycnn_model(model_path, compile_model=False)
     processor = ImageProcessor(cfg.IMG_SIZE)
+    class_names = None
+    if cfg.CLASS_MAP_PATH.exists():
+        with open(cfg.CLASS_MAP_PATH, "r", encoding="utf-8") as f:
+            class_indices = json.load(f)
+        class_names = [None] * len(class_indices)
+        for name, idx in class_indices.items():
+            class_names[int(idx)] = name
+
+    confidence_threshold = 0.55
 
     cap = cv2.VideoCapture(0)
     print("Iniciando Webcam... Clique na janela do vídeo e pressione 'q' para sair.")
@@ -44,18 +55,27 @@ def iniciar_inferencia():
             rosto_crop = gray_clahe[y1:y2, x1:x2]
             rosto_resized = cv2.resize(rosto_crop, (cfg.IMG_SIZE, cfg.IMG_SIZE))
 
-            # 5. Normalização e Predição
+            # 5. Normalizao e Predio
             rosto_norm = rosto_resized.astype("float32") / 255.0
             rosto_input = np.expand_dims(rosto_norm, axis=(0, -1))
-            pred_prob = model.predict(rosto_input, verbose=0)[0][0]
+            probs = model.predict(rosto_input, verbose=0)[0]
+            pred_idx = int(np.argmax(probs))
+            pred_conf = float(probs[pred_idx])
 
-            # 6. Lógica de Cores e Texto
-            if pred_prob > 0.5:
-                label = f"AUTORIZADO ({pred_prob * 100:.1f}%)"
-                color = (0, 255, 0) # Verde
+            if class_names and pred_idx < len(class_names):
+                pred_class = class_names[pred_idx]
+                is_unknown = pred_class == cfg.UNKNOWN_CLASS_NAME
             else:
-                label = f"NEGADO ({pred_prob * 100:.1f}%)"
-                color = (0, 0, 255) # Vermelho
+                pred_class = f"classe_{pred_idx}"
+                is_unknown = pred_idx == 0
+
+            # 6. Lgica de Cores e Texto
+            if is_unknown or pred_conf < confidence_threshold:
+                label = f"NEGADO {pred_class} ({pred_conf * 100:.1f}%)"
+                color = (0, 0, 255)
+            else:
+                label = f"LIBERADO {pred_class} ({pred_conf * 100:.1f}%)"
+                color = (0, 255, 0)
 
             # --- DESENHO DO QUADRADO E TEXTO ---
             cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
@@ -64,7 +84,6 @@ def iniciar_inferencia():
             # Opcional: Mostra o que a rede está a ver num ecrã separado
             cv2.imshow('Visao da CNN (32x32)', cv2.resize(rosto_resized, (160, 160)))
 
-        # Exibe o frame final
         cv2.imshow('Fechadura Biometrica', frame)
 
         key = cv2.waitKey(20) & 0xFF

@@ -10,10 +10,12 @@ from src.config import Config
 from src.model import build_tiny_cnn
 
 cfg = Config()
+cfg.validate()
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 mlflow.set_tracking_uri("sqlite:///mlruns.db")
-mlflow.set_experiment("Fechadura_Biometrica_V3_75_25")
+mode_name = "Binario" if cfg.is_binary_mode else "Multiclasse"
+mlflow.set_experiment(f"Fechadura_Biometrica_{mode_name}_Aux")
 
 
 def load_data():
@@ -33,7 +35,7 @@ def load_data():
         cfg.PROCESSED_DIR / "train",
         target_size=(32, 32),
         color_mode="grayscale",
-        class_mode="binary",
+        class_mode="sparse",
         batch_size=32,
         shuffle=True
     )
@@ -41,7 +43,7 @@ def load_data():
         cfg.PROCESSED_DIR / "val",
         target_size=(32, 32),
         color_mode="grayscale",
-        class_mode="binary",
+        class_mode="sparse",
         batch_size=32,
         shuffle=False
     )
@@ -61,12 +63,12 @@ def run_training():
     print(f"\nPesos aplicados: {cw}")
 
     tuner = kt.Hyperband(
-        build_tiny_cnn,
-        objective=kt.Objective('val_auc', direction='max'), # Foca na separabilidade real (AUC) e tira foco de um threshold especifico
+        lambda hp: build_tiny_cnn(hp, train_data.num_classes, cfg),
+        objective=kt.Objective('val_accuracy', direction='max'),
         max_epochs=15,
         factor=3,
-        directory=str(cfg.PROJECT_ROOT / 'tuner_logs'),
-        project_name='tiny_cnn_robust'
+        directory=str(cfg.TUNER_LOGS_DIR),
+        project_name=f"{cfg.TUNER_PROJECT_NAME}_aux"
     )
 
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
@@ -90,7 +92,7 @@ def run_training():
             callbacks=[stop_early]
         )
 
-        model_path = cfg.PROJECT_ROOT / "models" / "tiny_cnn_binaria_final.h5"
+        model_path = cfg.MODEL_PATH
         model.save(str(model_path))
         print(f"\nSucesso! Modelo salvo em: {model_path}")
 

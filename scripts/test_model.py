@@ -4,14 +4,15 @@ from sklearn.metrics import confusion_matrix, classification_report
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from src.config import Config
+from src.model_io import load_tinycnn_model
 
 cfg = Config()
 
 
 def avaliar_modelo():
     print("Carregando o modelo final...")
-    model_path = cfg.PROJECT_ROOT / "models" / "tiny_cnn_binaria_final.h5"
-    model = tf.keras.models.load_model(str(model_path))
+    model_path = cfg.MODEL_PATH
+    model = load_tinycnn_model(model_path, compile_model=False)
 
     # Prepara os dados de TESTE
     test_datagen = ImageDataGenerator(rescale=1. / 255)
@@ -19,19 +20,19 @@ def avaliar_modelo():
         cfg.PROCESSED_DIR / "test",
         target_size=(cfg.IMG_SIZE, cfg.IMG_SIZE),
         color_mode="grayscale",
-        class_mode="binary",
+        class_mode="sparse",
         batch_size=32,
         shuffle=False
     )
 
     # Predições
     print("Gerando predições para o conjunto de teste...")
-    y_pred_prob = model.predict(test_gen)
-    y_pred = (y_pred_prob > 0.5).astype(int).flatten()
+    y_pred_prob = model.predict(test_gen, verbose=0)
+    y_pred = y_pred_prob.argmax(axis=1)
     y_true = test_gen.classes
     class_names = list(test_gen.class_indices.keys())
 
-    report = classification_report(y_true, y_pred, target_names=class_names)
+    report = classification_report(y_true, y_pred, target_names=class_names, zero_division=0)
     print("\n--- Relatório de Classificação ---")
     print(report)
 

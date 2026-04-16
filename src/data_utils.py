@@ -28,4 +28,6 @@ class DataExtractor:
         nfd = unicodedata.normalize('NFD', name)
         clean = ''.join([c for c in nfd if not unicodedata.combining(c)])
         clean = clean.replace(' ', '_')
-        return re.sub(r'[^a-zA-Z0-9_.]', '', clean)
+        clean = re.sub(r'[^a-zA-Z0-9_.]', '', clean)
+        clean = re.sub(r'_+', '_', clean).strip('_.')
+        return clean or "classe_autorizada"

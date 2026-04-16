@@ -32,6 +32,7 @@ def split_and_copy(files: list, class_name: str, train_ratio=0.8, val_ratio=0.1)
     return total
 
 def build_dataset():
+    cfg.validate()
     if not cfg.INTERIM_DIR.exists():
         print(f"ERRO: A pasta {cfg.INTERIM_DIR} não existe. Processe os dados interim primeiro.")
         return
@@ -52,17 +53,29 @@ def build_dataset():
     else:
         print("Aviso: Nenhuma imagem encontrada para a Classe 0.")
 
-    # --- 2. PROCESSAR CLASSE 1 (AUTORIZADOS) ---
-    print("\n--- Organizando Classe 1 (Autorizados) ---")
+    # --- 2. PROCESSAR CLASSES AUTORIZADAS ---
     if cfg.INTERIM_AUTORIZADO_DIR.exists():
-        autorizados_files = list(cfg.INTERIM_AUTORIZADO_DIR.rglob("*.jpg"))
-        if autorizados_files:
-            totals["Classe 1"] = split_and_copy(autorizados_files, "1_autorizado")
+        class_dirs = sorted([d for d in cfg.INTERIM_AUTORIZADO_DIR.iterdir() if d.is_dir()])
+        if not class_dirs:
+            print("Aviso: Nenhuma pasta de aluno encontrada para classes autorizadas.")
+        if cfg.is_binary_mode:
+            print("\n--- Organizando Classe 1 (Autorizados - Binario) ---")
+            autorizados = []
+            for class_dir in class_dirs:
+                autorizados.extend(list(class_dir.rglob("*.jpg")))
+            if autorizados:
+                totals["Classe 1"] = split_and_copy(autorizados, cfg.BINARY_AUTHORIZED_CLASS_NAME)
         else:
-            print("Aviso: Nenhuma imagem encontrada para a Classe 1.")
+            print("\n--- Organizando Classes de Autorizados (Multiclasse) ---")
+            for idx, class_dir in enumerate(class_dirs, start=1):
+                autorizados_files = list(class_dir.rglob("*.jpg"))
+                class_name = f"{idx}_{class_dir.name}"
+                if autorizados_files:
+                    totals[f"Classe {class_name}"] = split_and_copy(autorizados_files, class_name)
 
     print("\n" + "="*50)
-    print("RESUMO DO DATASET PROCESSADO (BINÁRIO)")
+    modo = "BINARIO" if cfg.is_binary_mode else "MULTICLASSE"
+    print(f"RESUMO DO DATASET PROCESSADO ({modo})")
     print("="*50)
     for cls, count in totals.items():
         percentage = (count / sum(totals.values())) * 100

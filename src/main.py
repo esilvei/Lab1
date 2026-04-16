@@ -2,6 +2,18 @@ import os
 import random
 import kagglehub
 import shutil
+import warnings
+import tensorflow as tf
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['OPENCV_LOG_LEVEL'] = 'OFF'
+
+# Desativa mensagens de advertência e barras de progresso verbosas do Keras
+warnings.filterwarnings('ignore')
+tf.get_logger().setLevel('ERROR')
+tf.keras.utils.disable_interactive_logging()
+
 from src.config import Config
 from src.data_utils import DataExtractor
 from src.preprocessor import ImageProcessor, DataPreprocessor
@@ -11,15 +23,10 @@ from src.evaluator import ModelEvaluator
 from src.model import build_tiny_cnn
 from src.export_mif import export_model_to_mif
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-os.environ['OPENCV_LOG_LEVEL'] = 'OFF'
-
-
-
 
 def main():
     cfg = Config()
+    cfg.validate()
     extractor = DataExtractor()
     img_processor = ImageProcessor(cfg.IMG_SIZE)
     data_preprocessor = DataPreprocessor(cfg, img_processor, extractor)
@@ -49,20 +56,43 @@ def main():
     # 2. PRÉ-PROCESSAMENTO (Raw -> Interim)
     data_preprocessor.clear_interim()
 
-    # Processa fotos/vídeos da equipe (Classe 1)
-    data_preprocessor.process_authorized(max_fotos=800)
+    # Processa fotos/vídeos da equipe (Classe 1) com alvo automatico de balanceamento
+    data_preprocessor.process_authorized()
 
     # Processa minerando faces do LFW e Selfies (Classe 0)
-    data_preprocessor.process_unknowns(ratio=1.5)
+    data_preprocessor.process_unknowns(ratio=cfg.UNKNOWN_RATIO_ACTIVE)
 
-    # 3. ORGANIZA‡ƒO DO DATASET (Interim -> Processed)
+    # 3. ORGANIZACAO DO DATASET (Interim -> Processed)
     print("\n[PASSO 3] Organizando Dataset (Split Treino/Validao/Teste)...")
     ds_manager.clean_processed()
-    ds_manager.split_data(list(cfg.NEGADOS_INTERIM_DIR.glob("*.jpg")), "0_desconhecido")
-    ds_manager.split_data(list(cfg.INTERIM_AUTORIZADO_DIR.rglob("*.jpg")), "1_autorizado")
+
+    total_classes = 0
+    desconhecidos = list(cfg.NEGADOS_INTERIM_DIR.glob("*.jpg"))
+    if desconhecidos:
+        ds_manager.split_data(desconhecidos, cfg.UNKNOWN_CLASS_NAME)
+        total_classes += 1
+
+    alunos_dirs = sorted([p for p in cfg.INTERIM_AUTORIZADO_DIR.iterdir() if p.is_dir()])
+    if cfg.is_binary_mode:
+        autorizados = []
+        for aluno_dir in alunos_dirs:
+            autorizados.extend(list(aluno_dir.rglob("*.jpg")))
+        if autorizados:
+            ds_manager.split_data(autorizados, cfg.BINARY_AUTHORIZED_CLASS_NAME)
+            total_classes += 1
+        print(f" -> Dataset binario pronto com {total_classes} classes.")
+    else:
+        for idx, aluno_dir in enumerate(alunos_dirs, start=1):
+            class_name = f"{idx}_{aluno_dir.name}"
+            aluno_imgs = list(aluno_dir.rglob("*.jpg"))
+            if aluno_imgs:
+                ds_manager.split_data(aluno_imgs, class_name)
+                total_classes += 1
+        print(f" -> Dataset multiclasse pronto com {total_classes} classes.")
 
     # 4. TREINAMENTO E TUNING
-    print("\n[PASSO 4] Iniciando Treinamento com Keras Tuner...")
+    modo = "Binario" if cfg.is_binary_mode else "Multiclasse"
+    print(f"\n[PASSO 4] Iniciando Treinamento Tiny-CNN ({modo})...")
     engine = ModelEngine(cfg, build_tiny_cnn)
     history, model = engine.train()
 
@@ -70,6 +100,10 @@ def main():
     print("\n[PASSO 5] Gerando relatórios e arquivos para FPGA...")
     evaluator.plot_training_history(history)
     evaluator.evaluate_on_test_set()
+
+    # 5.1 VALIDAÇÃO DE QUANTIZAÇÃO (NÍVEL 1)
+    print("\n[PASSO 5.1] Validando integridade de quantização Q1.7...")
+    evaluator.validate_quantization_degradation()
 
     # Exportação para arquivos .mif quantizados em Q1.7
     export_model_to_mif()

@@ -1,0 +1,128 @@
+================================================================================
+RELATÓRIO DE ANÁLISE DE TREINAMENTO E HIPERPARÂMETROS
+================================================================================
+
+1. ESTATÍSTICAS GERAIS
+--------------------------------------------------------------------------------
+Total de Trials: 64
+Val Macro-F1 - Mínimo: 0.8503
+Val Macro-F1 - Máximo: 0.9669
+Val Macro-F1 - Média: 0.9231
+Val Macro-F1 - Std Dev: 0.0280
+Val Bal Acc - Média: 0.9481
+Val Loss - Mínimo: 0.1767
+
+2. TOP 5 TRIALS (por Val Macro-F1)
+--------------------------------------------------------------------------------
+
+Rank #1: Trial 12
+  Val Macro-F1:       0.9669
+  Val Bal Acc: 0.9706
+  Val Loss:      0.1767
+  Dropout:       0.1
+  Learning Rate: 0.003
+  Peso Classe 0: 1.0
+
+Rank #2: Trial 16
+  Val Macro-F1:       0.9599
+  Val Bal Acc: 0.9679
+  Val Loss:      0.1850
+  Dropout:       0.4
+  Learning Rate: 0.002
+  Peso Classe 0: 0.75
+
+Rank #3: Trial 09
+  Val Macro-F1:       0.9585
+  Val Bal Acc: 0.9673
+  Val Loss:      0.1922
+  Dropout:       0.2
+  Learning Rate: 0.002
+  Peso Classe 0: 0.75
+
+Rank #4: Trial 04
+  Val Macro-F1:       0.9574
+  Val Bal Acc: 0.9634
+  Val Loss:      0.2049
+  Dropout:       0.2
+  Learning Rate: 0.001
+  Peso Classe 0: 1.0
+
+Rank #5: Trial 21
+  Val Macro-F1:       0.9569
+  Val Bal Acc: 0.9609
+  Val Loss:      0.2043
+  Dropout:       0.4
+  Learning Rate: 0.003
+  Peso Classe 0: 1.0
+
+
+3. ANÁLISE POR HIPERPARÂMETRO
+--------------------------------------------------------------------------------
+
+Dropout:
+         count      mean       std       min       max
+Dropout                                               
+0.1         16  0.929629  0.020549  0.886320  0.966917
+0.2         18  0.933131  0.023201  0.880591  0.958541
+0.3         14  0.917801  0.030830  0.861797  0.956032
+0.4         16  0.910077  0.032459  0.850299  0.959851
+
+Learning Rate:
+            count      mean       std       min       max
+Learn Rate                                               
+0.0005         18  0.912883  0.029939  0.858298  0.955492
+0.0010         16  0.929202  0.020366  0.882703  0.957410
+0.0020         14  0.920928  0.034601  0.850299  0.959851
+0.0030         16  0.930546  0.024213  0.877293  0.966917
+
+Peso Classe 0:
+         count      mean       std       min       max
+Peso C0                                               
+0.10        14  0.890790  0.025852  0.850299  0.926375
+0.25        12  0.917276  0.026123  0.882497  0.951772
+0.50        13  0.928088  0.014816  0.903640  0.956520
+0.75        13  0.938132  0.019227  0.896105  0.959851
+1.00        12  0.945135  0.013042  0.928063  0.966917
+
+4. MÉTRICAS FINAIS DE TESTE
+--------------------------------------------------------------------------------
+auc_ovr_macro: 0.9982
+macro_f1: 0.9521
+balanced_accuracy: 0.9536
+unknown_recall: 0.9148
+authorized_recall_macro: 0.9566
+
+5. MELHORES HIPERPARÂMETROS ENCONTRADOS
+--------------------------------------------------------------------------------
+dropout: 0.1
+learning_rate: 0.003
+optimizer: adam
+peso_classe_0: 1.0
+
+6. RECOMENDAÇÕES DE MELHORIA
+--------------------------------------------------------------------------------
+
+✓ RECOMENDAÇÃO 1: Expandir espaço de otimizadores
+  - Adicionar RMSprop e SGD ao lado do Adam
+  - Esperado: +1-2% de AUC
+  - Esforço: Médio
+
+✓ RECOMENDAÇÃO 2: Ativar Quantization-Aware Training (QAT)
+  - ENABLE_HARD_WEIGHT_CONSTRAINT_DURING_TRAIN = True
+  - Esperado: Preservar +2-5% pós-exportação FPGA
+  - Esforço: Baixo
+
+✓ RECOMENDAÇÃO 3: Aumentar épocas de busca
+  - Aumentar de 100 para 150 épocas
+  - Esperado: Melhor convergência +0.5-1%
+  - Esforço: Alto (tempo)
+
+✓ RECOMENDAÇÃO 4: Implementar Learning Rate Schedule
+  - Usar ReduceLROnPlateau
+  - Esperado: +1-2% de estabilidade
+  - Esforço: Baixo
+
+✓ RECOMENDAÇÃO 5: Adicionar L2 Regularization
+  - Expandir espaço para [1e-5, 1e-4, 1e-3]
+  - Esperado: Melhor generalização +0.5%
+  - Esforço: Médio

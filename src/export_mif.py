@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from src.config import Config
+from src.model_io import load_tinycnn_model
 
 cfg = Config()
 
@@ -27,6 +28,12 @@ class MIFExporter:
             all_weights.append(weights[1].flatten())
         
         flat_data = np.concatenate(all_weights)
+        estimated_bytes = len(flat_data) * (self.bit_width // 8)
+        if estimated_bytes > cfg.MAX_MIF_BYTES:
+            raise RuntimeError(
+                f"Pesos excedem limite da FPGA: {estimated_bytes} bytes > {cfg.MAX_MIF_BYTES} bytes."
+            )
+
         mif_content = [
             f"DEPTH = {len(flat_data)};",
             f"WIDTH = {self.bit_width};",
@@ -37,16 +44,16 @@ class MIFExporter:
         for addr, val in enumerate(flat_data):
             mif_content.append(f"{addr:X} : {self.to_fixed_point(val)};")
         mif_content.append("END;")
-        output_path = cfg.PROJECT_ROOT / "export" / f"{filename}.mif"
+        output_path = cfg.EXPORT_DIR / f"{filename}.mif"
         output_path.parent.mkdir(exist_ok=True)
         with open(output_path, "w") as f:
             f.write("\n".join(mif_content))
-        print(f" -> Exportado: {filename}.mif ({len(flat_data)} words)")
+        print(f" -> Exportado: {filename}.mif ({len(flat_data)} words, {estimated_bytes} bytes)")
 
 def export_model_to_mif():
-    model_path = cfg.PROJECT_ROOT / "models" / "tiny_cnn_binaria_final.h5"
+    model_path = cfg.MODEL_PATH
     if not model_path.exists(): return
-    model = tf.keras.models.load_model(str(model_path))
+    model = load_tinycnn_model(model_path, compile_model=False)
     exporter = MIFExporter()
     print("\n[MIF] Iniciando exportação dos pesos quantizados num único arquivo...")
     exporter.generate_single_mif(model, "all_weights")
