@@ -2,6 +2,12 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import json
+import sys
+from pathlib import Path
+
+# Add project root to sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 from src.config import Config
 from src.preprocessor import ImageProcessor
 from src.model_io import load_tinycnn_model
@@ -18,12 +24,20 @@ def iniciar_inferencia():
     model = load_tinycnn_model(model_path, compile_model=False)
     processor = ImageProcessor(cfg.IMG_SIZE)
     class_names = None
-    if cfg.CLASS_MAP_PATH.exists():
-        with open(cfg.CLASS_MAP_PATH, "r", encoding="utf-8") as f:
+    
+    # Tenta usar o arquivo com sufixo, senao usa o generico
+    class_map_file = cfg.CLASS_MAP_PATH
+    if not class_map_file.exists():
+        class_map_file = cfg.MODELS_DIR / "class_indices.json"
+
+    if class_map_file.exists():
+        with open(class_map_file, "r", encoding="utf-8") as f:
             class_indices = json.load(f)
         class_names = [None] * len(class_indices)
         for name, idx in class_indices.items():
             class_names[int(idx)] = name
+    else:
+        print(f"Aviso: Arquivo de classes não encontrado em {class_map_file}")
 
     confidence_threshold = 0.55
 
@@ -66,11 +80,18 @@ def iniciar_inferencia():
                 raw_class = class_names[pred_idx]
                 is_unknown = raw_class == cfg.UNKNOWN_CLASS_NAME
                 
-                # Remove o prefixo de ID (ex: "10_Naira_Beatriz" -> "Naira Beatriz")
+                # Remove o prefixo numérico se existir (ex: "10_Naira_Beatriz" -> "Naira_Beatriz", "Eduardo_Fontes" -> "Eduardo_Fontes")
                 if "_" in raw_class:
-                    display_name = raw_class.split("_", 1)[1].replace("_", " ")
+                    parts = raw_class.split("_", 1)
+                    if parts[0].isdigit():
+                        display_name = parts[1]
+                    else:
+                        display_name = raw_class
                 else:
                     display_name = raw_class
+                
+                # Substitui espaços por underscores, caso existam, para o formato Nome_Sobrenome
+                display_name = display_name.replace(" ", "_")
             else:
                 display_name = f"classe {pred_idx}"
                 is_unknown = pred_idx == 0
