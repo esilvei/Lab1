@@ -12,7 +12,7 @@ os.environ['OPENCV_LOG_LEVEL'] = 'OFF'
 # Desativa mensagens de advertência e barras de progresso verbosas do Keras
 warnings.filterwarnings('ignore')
 tf.get_logger().setLevel('ERROR')
-tf.keras.utils.disable_interactive_logging()
+# tf.keras.utils.disable_interactive_logging()  # Comentado para mostrar o progresso do treinamento
 
 from src.config import Config
 from src.data_utils import DataExtractor

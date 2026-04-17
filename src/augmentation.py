@@ -11,13 +11,12 @@ def create_augmentation_pipeline(intensity=0.1):
 
     return ImageDataGenerator(
         rescale=1.0 / 255,
-        rotation_range=int(15 * intensity),
-        width_shift_range=0.1 * intensity,
-        height_shift_range=0.1 * intensity,
-        shear_range=0.1 * intensity,
-        zoom_range=0.1 * intensity,
-        horizontal_flip=True,
-        vertical_flip=True,
+        rotation_range=int(10 * intensity),
+        width_shift_range=0.05 * intensity,
+        height_shift_range=0.05 * intensity,
+        shear_range=0.05 * intensity,
+        zoom_range=0.05 * intensity,
+        horizontal_flip=False,
+        vertical_flip=False,
         fill_mode='reflect',
     )
-

@@ -148,9 +148,9 @@ class ModelEngine:
         else:
             train_gen = ImageDataGenerator(
                 rescale=1. / 255,
-                rotation_range=10,
-                brightness_range=[0.6, 1.4],
-                horizontal_flip=True
+                rotation_range=5,
+                brightness_range=[0.8, 1.2],
+                horizontal_flip=False
             )
 
         # A validação deve permanecer limpa para refletir a performance real do modelo.

@@ -61,21 +61,23 @@ def iniciar_inferencia():
             cv2.putText(frame, "Procurando rosto...", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
         for (x, y, w, h) in faces:
-            # 4. Extração com padding (idêntico ao dataset)
+            # Extrair rosto com o mesmo padding de 15% usado no treinamento
             pad = int(w * 0.15)
-            y1, y2 = max(0, y - pad), min(gray_clahe.shape[0], y + h + pad)
-            x1, x2 = max(0, x - pad), min(gray_clahe.shape[1], x + w + pad)
+            y1, y2 = max(0, y - pad), min(gray.shape[0], y + h + pad)
+            x1, x2 = max(0, x - pad), min(gray.shape[1], x + w + pad)
+            
+            face_roi = gray_clahe[y1:y2, x1:x2]
+            if face_roi.size == 0:
+                continue
 
-            rosto_crop = gray_clahe[y1:y2, x1:x2]
-            rosto_resized = cv2.resize(rosto_crop, (cfg.IMG_SIZE, cfg.IMG_SIZE))
-
-            # 5. Normalizao e Predio
-            rosto_norm = rosto_resized.astype("float32") / 255.0
-            rosto_input = np.expand_dims(rosto_norm, axis=(0, -1))
+            face_resized = cv2.resize(face_roi, (32, 32))
+            face_normalized = face_resized.astype('float32') / 255.0
+            rosto_input = np.expand_dims(face_normalized, axis=(0, -1))
             probs = model.predict(rosto_input, verbose=0)[0]
             pred_idx = int(np.argmax(probs))
             pred_conf = float(probs[pred_idx])
 
+            # ------------- DEBBUGING DE DECODIFICAÇÃO -------------
             if class_names and pred_idx < len(class_names):
                 raw_class = class_names[pred_idx]
                 is_unknown = raw_class == cfg.UNKNOWN_CLASS_NAME
@@ -96,6 +98,9 @@ def iniciar_inferencia():
                 display_name = f"classe {pred_idx}"
                 is_unknown = pred_idx == 0
 
+            # Imprime o mapeamento real no terminal para quebrar a dúvida!
+            print(f"Index da CNN: {pred_idx} | Classe Mapeada: {display_name} | Confiança: {pred_conf*100:.1f}%")
+
             # 6. Lgica de Cores e Texto
             if is_unknown or pred_conf < confidence_threshold:
                 label = f"NEGADO {display_name} ({pred_conf * 100:.1f}%)"
@@ -109,7 +114,7 @@ def iniciar_inferencia():
             cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
             # Opcional: Mostra o que a rede está a ver num ecrã separado
-            cv2.imshow('Visao da CNN (32x32)', cv2.resize(rosto_resized, (160, 160)))
+            cv2.imshow('Visao da CNN (32x32)', cv2.resize(face_resized, (160, 160)))
 
         cv2.imshow('Fechadura Biometrica', frame)
 
