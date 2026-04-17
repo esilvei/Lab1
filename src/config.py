@@ -60,11 +60,12 @@ class Config:
         self.UNKNOWN_RATIO_MULTICLASS = 0.35
 
         # Meta automatica para balanceamento das classes autorizadas.
-        # Usa um quantil mais conservador para reduzir o volume de faces artificiais.
-        self.AUTHORIZED_TARGET_STRATEGY = "quantile"
+        # Estratégia mediana e limite de proporção de augmentation para reduzir overfitting.
+        self.AUTHORIZED_TARGET_STRATEGY = "median"
+        self.MAX_AUG_MULTIPLIER = 1.0  # Limite máximo de imagens artificiais (1.0 = até 1x o natural)
         self.AUTHORIZED_TARGET_QUANTILE = 0.25
         self.AUTHORIZED_TARGET_MIN = 400
-        self.AUTHORIZED_TARGET_MAX = 600
+        self.AUTHORIZED_TARGET_MAX = 3000
         self.AUTHORIZED_TARGET_FALLBACK = 500
 
         # Espacos de busca por modo.

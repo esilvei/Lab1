@@ -113,6 +113,8 @@ class DataPreprocessor:
             target = int(np.median(counts))
         elif strategy == "mean":
             target = int(np.mean(counts))
+        elif strategy == "max":
+            target = int(np.max(counts))
         else:
             target = int(getattr(self.cfg, "AUTHORIZED_TARGET_FALLBACK", 500))
 
@@ -182,7 +184,8 @@ class DataPreprocessor:
                 num_aug = 0
             else:
                 rostos_base = list(rostos)
-                num_aug = target_fotos - base_detectadas
+                max_aug_allowed = int(base_detectadas * getattr(self.cfg, "MAX_AUG_MULTIPLIER", 1.0))
+                num_aug = min(target_fotos - base_detectadas, max_aug_allowed)
 
             for i, r in enumerate(rostos_base):
                 cv2.imwrite(str(dest / f"{i:04d}.jpg"), r)
@@ -242,4 +245,3 @@ class DataPreprocessor:
                         count += 1
             except (cv2.error, OSError):
                 continue
-

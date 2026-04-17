@@ -63,18 +63,24 @@ def iniciar_inferencia():
             pred_conf = float(probs[pred_idx])
 
             if class_names and pred_idx < len(class_names):
-                pred_class = class_names[pred_idx]
-                is_unknown = pred_class == cfg.UNKNOWN_CLASS_NAME
+                raw_class = class_names[pred_idx]
+                is_unknown = raw_class == cfg.UNKNOWN_CLASS_NAME
+                
+                # Remove o prefixo de ID (ex: "10_Naira_Beatriz" -> "Naira Beatriz")
+                if "_" in raw_class:
+                    display_name = raw_class.split("_", 1)[1].replace("_", " ")
+                else:
+                    display_name = raw_class
             else:
-                pred_class = f"classe_{pred_idx}"
+                display_name = f"classe {pred_idx}"
                 is_unknown = pred_idx == 0
 
             # 6. Lgica de Cores e Texto
             if is_unknown or pred_conf < confidence_threshold:
-                label = f"NEGADO {pred_class} ({pred_conf * 100:.1f}%)"
+                label = f"NEGADO {display_name} ({pred_conf * 100:.1f}%)"
                 color = (0, 0, 255)
             else:
-                label = f"LIBERADO {pred_class} ({pred_conf * 100:.1f}%)"
+                label = f"LIBERADO {display_name} ({pred_conf * 100:.1f}%)"
                 color = (0, 255, 0)
 
             # --- DESENHO DO QUADRADO E TEXTO ---
