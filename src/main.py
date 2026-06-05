@@ -3,16 +3,15 @@ import random
 import kagglehub
 import shutil
 import warnings
-import tensorflow as tf
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['OPENCV_LOG_LEVEL'] = 'OFF'
 
-# Desativa mensagens de advertência e barras de progresso verbosas do Keras
+import tensorflow as tf
+
 warnings.filterwarnings('ignore')
 tf.get_logger().setLevel('ERROR')
-# tf.keras.utils.disable_interactive_logging()  # Comentado para mostrar o progresso do treinamento
 
 from src.config import Config
 from src.data_utils import DataExtractor
@@ -27,6 +26,7 @@ from src.export_mif import export_model_to_mif
 def main():
     cfg = Config()
     cfg.validate()
+    cfg.setup_directories()
     extractor = DataExtractor()
     img_processor = ImageProcessor(cfg.IMG_SIZE)
     data_preprocessor = DataPreprocessor(cfg, img_processor, extractor)
@@ -38,7 +38,7 @@ def main():
     print("         INICIANDO PIPELINE BIOMÉTRICA (ARTEFATO 1)      ")
     print("=" * 50)
 
-    # 1. GESTÃO DE DATASETS EXTERNOS (Classe 0)
+    # 1. GESTÃO DE DATASETS da Classe 0
     print("\n[PASSO 1] Gerenciando fontes de Desconhecidos...")
 
     # Extração das Selfies locais (.tar.gz)
@@ -46,20 +46,15 @@ def main():
     if tar_selfies.exists():
         extractor.extract_tar(tar_selfies, cfg.RAW_DIR / "selfies", limit=3000)
 
-    lfw_download_path = kagglehub.dataset_download("atulanandjha/lfwpeople")
     lfw_raw_folder = cfg.RAW_DIR / "lfw_extracted"
-
     if not lfw_raw_folder.exists():
-        print("  -> Extraindo LFW para a estrutura do projeto...")
+        print("  -> Baixando e extraindo LFW (conexão necessária)...")
+        lfw_download_path = kagglehub.dataset_download("atulanandjha/lfwpeople")
         shutil.copytree(lfw_download_path, lfw_raw_folder)
 
     # 2. PRÉ-PROCESSAMENTO (Raw -> Interim)
     data_preprocessor.clear_interim()
-
-    # Processa fotos/vídeos da equipe (Classe 1) com alvo automatico de balanceamento
     data_preprocessor.process_authorized()
-
-    # Processa minerando faces do LFW e Selfies (Classe 0)
     data_preprocessor.process_unknowns(ratio=cfg.UNKNOWN_RATIO_ACTIVE)
 
     # 3. ORGANIZACAO DO DATASET (Interim -> Processed)

@@ -27,6 +27,16 @@ def build_tiny_cnn(hp, num_classes, cfg):
     hp_dropout = hp.Choice('dropout', values=cfg.SEARCH_DROPOUT_VALUES)
     model.add(layers.Dropout(rate=hp_dropout))
 
+    dense_units = hp.Choice('dense_units', values=getattr(cfg, 'SEARCH_DENSE_UNITS', [16, 32, 64]))
+    model.add(layers.Dense(
+        dense_units,
+        activation='relu',
+        kernel_constraint=weight_constraint,
+        bias_constraint=weight_constraint,
+        name='dense_hidden'
+    ))
+    model.add(layers.Dropout(rate=min(0.5, hp_dropout)))
+
     model.add(layers.Dense(
         num_classes,
         activation='softmax',

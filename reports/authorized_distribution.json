@@ -1,0 +1,131 @@
+{
+  "classes": [
+    {
+      "class": "Anna_Carol",
+      "base_detected": 1083,
+      "aug_generated": 472,
+      "total_final": 1500,
+      "pct_augmented": 0.31466666666666665
+    },
+    {
+      "class": "Bruno",
+      "base_detected": 986,
+      "aug_generated": 564,
+      "total_final": 1500,
+      "pct_augmented": 0.376
+    },
+    {
+      "class": "Diego",
+      "base_detected": 1735,
+      "aug_generated": 0,
+      "total_final": 1500,
+      "pct_augmented": 0.0
+    },
+    {
+      "class": "Eduardo",
+      "base_detected": 1317,
+      "aug_generated": 249,
+      "total_final": 1500,
+      "pct_augmented": 0.166
+    },
+    {
+      "class": "Felipe",
+      "base_detected": 1268,
+      "aug_generated": 296,
+      "total_final": 1500,
+      "pct_augmented": 0.19733333333333333
+    },
+    {
+      "class": "Fabio",
+      "base_detected": 1598,
+      "aug_generated": 0,
+      "total_final": 1500,
+      "pct_augmented": 0.0
+    },
+    {
+      "class": "Gabriel",
+      "base_detected": 1282,
+      "aug_generated": 283,
+      "total_final": 1500,
+      "pct_augmented": 0.18866666666666668
+    },
+    {
+      "class": "Horacio",
+      "base_detected": 1072,
+      "aug_generated": 482,
+      "total_final": 1500,
+      "pct_augmented": 0.32133333333333336
+    },
+    {
+      "class": "Hugo",
+      "base_detected": 4098,
+      "aug_generated": 0,
+      "total_final": 1500,
+      "pct_augmented": 0.0
+    },
+    {
+      "class": "Igor",
+      "base_detected": 1269,
+      "aug_generated": 295,
+      "total_final": 1500,
+      "pct_augmented": 0.19666666666666666
+    },
+    {
+      "class": "Jose_Henrique",
+      "base_detected": 310,
+      "aug_generated": 294,
+      "total_final": 588,
+      "pct_augmented": 0.5
+    },
+    {
+      "class": "Joao",
+      "base_detected": 2009,
+      "aug_generated": 0,
+      "total_final": 1500,
+      "pct_augmented": 0.0
+    },
+    {
+      "class": "Julia",
+      "base_detected": 956,
+      "aug_generated": 592,
+      "total_final": 1500,
+      "pct_augmented": 0.39466666666666667
+    },
+    {
+      "class": "Lucio",
+      "base_detected": 2296,
+      "aug_generated": 0,
+      "total_final": 1500,
+      "pct_augmented": 0.0
+    },
+    {
+      "class": "Naira",
+      "base_detected": 1937,
+      "aug_generated": 0,
+      "total_final": 1500,
+      "pct_augmented": 0.0
+    },
+    {
+      "class": "Rafael",
+      "base_detected": 468,
+      "aug_generated": 444,
+      "total_final": 888,
+      "pct_augmented": 0.5
+    },
+    {
+      "class": "Samuel",
+      "base_detected": 1445,
+      "aug_generated": 128,
+      "total_final": 1500,
+      "pct_augmented": 0.08533333333333333
+    },
+    {
+      "class": "Yuri",
+      "base_detected": 1702,
+      "aug_generated": 0,
+      "total_final": 1500,
+      "pct_augmented": 0.0
+    }
+  ],
+  "total_classes": 18
+}

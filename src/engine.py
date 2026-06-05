@@ -106,11 +106,14 @@ class ModelEngine:
             hps.Fixed('learning_rate', float(saved_hps.get('learning_rate', self.cfg.DEFAULT_LEARNING_RATE)))
             hps.Fixed('optimizer', str(saved_hps.get('optimizer', self.cfg.DEFAULT_OPTIMIZER)))
             hps.Fixed('peso_classe_0', float(saved_hps.get('peso_classe_0', self.cfg.DEFAULT_PESO_CLASSE_0)))
+            if 'dense_units' in saved_hps:
+                hps.Fixed('dense_units', int(saved_hps['dense_units']))
         else:
             hps.Fixed('dropout', self.cfg.DEFAULT_DROPOUT)
             hps.Fixed('learning_rate', self.cfg.DEFAULT_LEARNING_RATE)
             hps.Fixed('optimizer', self.cfg.DEFAULT_OPTIMIZER)
             hps.Fixed('peso_classe_0', self.cfg.DEFAULT_PESO_CLASSE_0)
+            hps.Fixed('dense_units', 48)
         return hps
 
     @staticmethod
@@ -119,14 +122,17 @@ class ModelEngine:
         cw_final[unknown_idx] = cw_final[unknown_idx] * peso_c0
         return cw_final
 
-    def _build_callbacks(self, val_gen):
+    def _build_callbacks(self, val_gen, is_search=False):
         unknown_idx = val_gen.class_indices.get(self.cfg.UNKNOWN_CLASS_NAME, 0)
+        patience = self.cfg.SEARCH_EARLY_STOP_PATIENCE if is_search else self.cfg.EARLY_STOP_PATIENCE
+        qat_start_epoch = self.cfg.QAT_START_EPOCH_SEARCH if is_search else self.cfg.QAT_START_EPOCH_FINAL
+        qat_frequency = 3 if is_search else 1
         callbacks = [
             ValidationMetricsCallback(val_gen, unknown_idx),
             tf.keras.callbacks.EarlyStopping(
                 monitor='val_macro_f1',
                 mode='max',
-                patience=self.cfg.EARLY_STOP_PATIENCE,
+                patience=patience,
                 restore_best_weights=True
             )
         ]
@@ -135,7 +141,8 @@ class ModelEngine:
             callbacks.append(
                 Q17WeightQuantizationCallback(
                     frac_bits=self.cfg.QUANT_FRAC_BITS,
-                    start_epoch=self.cfg.QAT_START_EPOCH
+                    start_epoch=qat_start_epoch,
+                    frequency=qat_frequency,
                 )
             )
 
@@ -204,7 +211,7 @@ class ModelEngine:
         base_cw = dict(enumerate(weights))
         base_cw = self._to_int_key_dict(base_cw)
 
-        callbacks = self._build_callbacks(val_gen)
+        callbacks = self._build_callbacks(val_gen, is_search=run_search)
         mlflow.keras.autolog(log_models=True)
 
 
@@ -214,8 +221,10 @@ class ModelEngine:
             print(f"  - optimizer: {self.cfg.SEARCH_OPTIMIZERS}")
             print(f"  - learning_rate: {self.cfg.SEARCH_LR_VALUES}")
             print(f"  - peso_classe_0: {self.cfg.SEARCH_PESO_C0_VALUES}")
+            print(f"  - dense_units: {self.cfg.SEARCH_DENSE_UNITS}")
             print(f"  - max_trials: {self.cfg.TUNER_MAX_TRIALS}")
             print(f"  - search_epochs: {self.cfg.SEARCH_EPOCHS}")
+            print(f"  - overwrite: {getattr(self.cfg, 'TUNER_OVERWRITE', False)}")
 
             hypermodel_wrapper = TinyCNNHyperModel(
                 self.model_builder,
@@ -231,7 +240,7 @@ class ModelEngine:
                 max_trials=self.cfg.TUNER_MAX_TRIALS,
                 directory=str(self.cfg.TUNER_LOGS_DIR),
                 project_name=self.cfg.TUNER_PROJECT_NAME,
-                overwrite=False
+                overwrite=bool(getattr(self.cfg, 'TUNER_OVERWRITE', False))
             )
 
             mode_name = "Binario" if self.cfg.is_binary_mode else "Multiclasse"
@@ -251,6 +260,7 @@ class ModelEngine:
 
                 peso_escolhido = best_hps.get('peso_classe_0')
                 cw_final = self._build_class_weight(base_cw, unknown_idx, peso_escolhido)
+                final_callbacks = self._build_callbacks(val_gen, is_search=False)
 
                 print("\n[PASSO 4.2] Iniciando ajuste fino do modelo final usando a melhor arquitetura encontrada...")
                 history = model.fit(
@@ -258,7 +268,7 @@ class ModelEngine:
                     validation_data=val_gen,
                     epochs=self.cfg.TRAIN_EPOCHS,
                     class_weight=cw_final,
-                    callbacks=callbacks
+                    callbacks=final_callbacks
                 )
 
                 model.save(str(self.cfg.MODEL_PATH))
@@ -276,6 +286,7 @@ class ModelEngine:
             model = self.model_builder(best_hps, train_gen.num_classes, self.cfg)
             peso_escolhido = best_hps.get('peso_classe_0')
             cw_final = self._build_class_weight(base_cw, unknown_idx, peso_escolhido)
+            final_callbacks = self._build_callbacks(val_gen, is_search=False)
 
             mode_name = "Binario" if self.cfg.is_binary_mode else "Multiclasse"
             with mlflow.start_run(run_name=f"Training_{mode_name}_Final"):
@@ -286,7 +297,7 @@ class ModelEngine:
                     validation_data=val_gen,
                     epochs=self.cfg.TRAIN_EPOCHS,
                     class_weight=cw_final,
-                    callbacks=callbacks
+                    callbacks=final_callbacks
                 )
 
                 model.save(str(self.cfg.MODEL_PATH))

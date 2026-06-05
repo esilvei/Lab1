@@ -1,4 +1,3 @@
-import os
 import json
 from pathlib import Path
 
@@ -13,6 +12,7 @@ class Config:
         return cls._instance
 
     def _init_paths(self):
+        # Definindo paths
         self.PROJECT_ROOT = Path(__file__).resolve().parent.parent
         self.DATA_DIR = self.PROJECT_ROOT / "data"
         self.RAW_DIR = self.DATA_DIR / "raw"
@@ -26,71 +26,73 @@ class Config:
         self.RAW_AUTORIZADO_DIR = self.RAW_DIR / "1_autorizado"
         self.INTERIM_AUTORIZADO_DIR = self.INTERIM_DIR / "1_autorizado"
         self.NEGADOS_INTERIM_DIR = self.INTERIM_DIR / "0_desconhecido"
-
         self.TUNER_LOGS_DIR = self.PROJECT_ROOT / "tuner_logs"
 
-        self.IMG_SIZE = 32
+        self.IMG_SIZE = 32 # não alterar
         self.CHANNELS = 1
-
-        # Modo de classificacao global: "binary" ou "multiclass".
         self.CLASSIFICATION_MODE = "multiclass"
-
-        # Classe 0 fixa para "desconhecido" e classes >=1 para alunos autorizados.
         self.UNKNOWN_CLASS_NAME = "0_desconhecido"
         self.BINARY_AUTHORIZED_CLASS_NAME = "1_autorizado"
 
-        # Busca de hiperparametros: None = decisao automatica por modo.
-        # True = forca busca, False = desativa busca.
         self.RUN_HYPERPARAMETER_SEARCH = False
-        self.TUNER_MAX_TRIALS = 16
-        self.SEARCH_EPOCHS = 120
+        self.TUNER_OVERWRITE = True
+        self.TUNER_MAX_TRIALS = 30
+        self.SEARCH_EPOCHS = 45
+        self.SEARCH_EARLY_STOP_PATIENCE = 10
 
-        # Treinamento final.
         self.TRAIN_EPOCHS = 200
         self.EARLY_STOP_PATIENCE = 25
 
-        # Melhor configuracao consolidada da ultima rodada.
+        # Hiperparametros padrao do modelo
         self.DEFAULT_DROPOUT = 0.1
         self.DEFAULT_OPTIMIZER = "adam"
-        self.DEFAULT_LEARNING_RATE = 0.003
+        self.DEFAULT_LEARNING_RATE = 0.002
         self.DEFAULT_PESO_CLASSE_0 = 1.0
+        # Proporção classe desconhecida
+        self.UNKNOWN_RATIO_BINARY = 1.0
+        self.UNKNOWN_RATIO_MULTICLASS = 0.2
 
-        # Controle de proporcao de desconhecidos por modo (interim classe 0).
-        self.UNKNOWN_RATIO_BINARY = 1.5
-        self.UNKNOWN_RATIO_MULTICLASS = 0.35
 
         # Meta automatica para balanceamento das classes autorizadas.
-        # Estratégia mediana e limite de proporção de augmentation para reduzir overfitting.
-        self.AUTHORIZED_TARGET_STRATEGY = "median"
-        self.MAX_AUG_MULTIPLIER = 1.0  # Limite máximo de imagens artificiais (1.0 = até 1x o natural)
+        # Estratégia max para obter o máximo de exemplos e multiplier alto.
+        self.AUTHORIZED_TARGET_STRATEGY = "max"
+        # Limita a quantidade de imagens artificiais por classe para evitar dominação por augmentations
+        self.MAX_AUG_MULTIPLIER = 3.0  # Permite até 3x de augmentation para atingir os números de amostras do alvo
         self.AUTHORIZED_TARGET_QUANTILE = 0.25
         self.AUTHORIZED_TARGET_MIN = 400
-        self.AUTHORIZED_TARGET_MAX = 3000
+        self.AUTHORIZED_TARGET_MAX = 1500
         self.AUTHORIZED_TARGET_FALLBACK = 500
 
-        # Espacos de busca por modo.
+        # Espacos de busca por modo
         self.BINARY_SEARCH_SPACE = {
-            "dropout": [0.3],
-            "optimizer": ["adam"],
-            "learning_rate": [1e-3, 2e-3],
-            "peso_classe_0": [1.5, 2.5],
-            "max_trials": 12,
-            "search_epochs": 90,
+            "dropout": [0.05, 0.1, 0.15, 0.2],
+            "optimizer": ["adam", "rmsprop"],
+            "learning_rate": [3e-4, 5e-4, 8e-4, 1e-3, 2e-3],
+            "peso_classe_0": [1.0, 1.25, 1.5, 2.0],
+            "dense_units": [16, 32, 48],
+            "max_trials": 16,
+            "search_epochs": 50,
         }
         self.MULTICLASS_SEARCH_SPACE = {
-            "dropout": [0.1, 0.2, 0.3],
+            "dropout": [0.05, 0.1, 0.15, 0.2],
             "optimizer": ["adam", "rmsprop"],
-            "learning_rate": [5e-4, 1e-3, 2e-3, 3e-3, 5e-3],
-            "peso_classe_0": [0.5, 1.0, 1.5, 2.0],
-            "max_trials": 64,
-            "search_epochs": 120,
+            "learning_rate": [3e-4, 5e-4, 8e-4, 1e-3, 2e-3],
+            "peso_classe_0": [0.75, 1.0, 1.25, 1.5],
+            "dense_units": [32, 48, 64],
+            "max_trials": 20,
+            "search_epochs": 55,
         }
 
         # Restricoes de quantizacao para alinhamento com FPGA (Q1.7).
         self.QUANT_BITS = 8
         self.QUANT_FRAC_BITS = 7
         self.ENABLE_QAT_WEIGHT_SIMULATION = True
-        self.QAT_START_EPOCH = 80  # Reduzido de 150 para convergência melhor
+        # QAT começa cedo na busca para que a seleção de hiperparâmetros já enxergue o regime quantizado.
+        self.QAT_START_EPOCH_SEARCH = 5
+        # No treino final, dá um warmup um pouco maior para estabilizar a convergência antes da quantização.
+        self.QAT_START_EPOCH_FINAL = 20
+        # Alias de compatibilidade com o resto do código e checkpoints antigos.
+        self.QAT_START_EPOCH = self.QAT_START_EPOCH_FINAL
         self.ENABLE_HARD_WEIGHT_CONSTRAINT_DURING_TRAIN = True  # ✅ QAT Ativado
 
         # Limite de armazenamento de pesos na SRAM externa (512 KB).
@@ -109,7 +111,7 @@ class Config:
     def _refresh_mode_dependent_paths(self):
         mode_suffix = "binario" if self.is_binary_mode else "multiclasse"
         self.TUNER_PROJECT_NAME = f"tiny_cnn_{mode_suffix}_search"
-        self.MODEL_FILENAME = f"tiny_cnn_{mode_suffix}_final.h5"
+        self.MODEL_FILENAME = f"tiny_cnn_{mode_suffix}.h5"
         self.MODEL_PATH = self.MODELS_DIR / self.MODEL_FILENAME
         self.CLASS_MAP_PATH = self.MODELS_DIR / f"class_indices_{mode_suffix}.json"
         self.BEST_HPS_PATH = self.MODELS_DIR / f"best_hyperparameters_{mode_suffix}.json"
@@ -128,6 +130,7 @@ class Config:
         self.SEARCH_OPTIMIZERS = active_space["optimizer"]
         self.SEARCH_LR_VALUES = active_space["learning_rate"]
         self.SEARCH_PESO_C0_VALUES = active_space["peso_classe_0"]
+        self.SEARCH_DENSE_UNITS = active_space.get("dense_units", [16, 32, 64])
         self.TUNER_MAX_TRIALS = active_space["max_trials"]
         self.SEARCH_EPOCHS = active_space["search_epochs"]
 
