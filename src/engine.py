@@ -106,14 +106,11 @@ class ModelEngine:
             hps.Fixed('learning_rate', float(saved_hps.get('learning_rate', self.cfg.DEFAULT_LEARNING_RATE)))
             hps.Fixed('optimizer', str(saved_hps.get('optimizer', self.cfg.DEFAULT_OPTIMIZER)))
             hps.Fixed('peso_classe_0', float(saved_hps.get('peso_classe_0', self.cfg.DEFAULT_PESO_CLASSE_0)))
-            if 'dense_units' in saved_hps:
-                hps.Fixed('dense_units', int(saved_hps['dense_units']))
         else:
             hps.Fixed('dropout', self.cfg.DEFAULT_DROPOUT)
             hps.Fixed('learning_rate', self.cfg.DEFAULT_LEARNING_RATE)
             hps.Fixed('optimizer', self.cfg.DEFAULT_OPTIMIZER)
             hps.Fixed('peso_classe_0', self.cfg.DEFAULT_PESO_CLASSE_0)
-            hps.Fixed('dense_units', 48)
         return hps
 
     @staticmethod
@@ -221,7 +218,6 @@ class ModelEngine:
             print(f"  - optimizer: {self.cfg.SEARCH_OPTIMIZERS}")
             print(f"  - learning_rate: {self.cfg.SEARCH_LR_VALUES}")
             print(f"  - peso_classe_0: {self.cfg.SEARCH_PESO_C0_VALUES}")
-            print(f"  - dense_units: {self.cfg.SEARCH_DENSE_UNITS}")
             print(f"  - max_trials: {self.cfg.TUNER_MAX_TRIALS}")
             print(f"  - search_epochs: {self.cfg.SEARCH_EPOCHS}")
             print(f"  - overwrite: {getattr(self.cfg, 'TUNER_OVERWRITE', False)}")

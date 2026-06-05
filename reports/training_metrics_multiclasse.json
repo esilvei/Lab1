@@ -1,7 +1,7 @@
 {
-  "auc_ovr_macro": 0.9999137286863508,
-  "macro_f1": 0.9898812570584464,
-  "balanced_accuracy": 0.9917862105147852,
-  "unknown_recall": 0.9598039215686275,
-  "authorized_recall_macro": 0.9935630043451273
+  "auc_ovr_macro": 0.999915716991918,
+  "macro_f1": 0.9901563162732124,
+  "balanced_accuracy": 0.9914248404448519,
+  "unknown_recall": 0.961764705882353,
+  "authorized_recall_macro": 0.9930726256983241
 }

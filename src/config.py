@@ -34,7 +34,7 @@ class Config:
         self.UNKNOWN_CLASS_NAME = "0_desconhecido"
         self.BINARY_AUTHORIZED_CLASS_NAME = "1_autorizado"
 
-        self.RUN_HYPERPARAMETER_SEARCH = False
+        self.RUN_HYPERPARAMETER_SEARCH = True
         self.TUNER_OVERWRITE = True
         self.TUNER_MAX_TRIALS = 30
         self.SEARCH_EPOCHS = 45
@@ -69,18 +69,16 @@ class Config:
             "optimizer": ["adam", "rmsprop"],
             "learning_rate": [3e-4, 5e-4, 8e-4, 1e-3, 2e-3],
             "peso_classe_0": [1.0, 1.25, 1.5, 2.0],
-            "dense_units": [16, 32, 48],
             "max_trials": 16,
             "search_epochs": 50,
         }
         self.MULTICLASS_SEARCH_SPACE = {
-            "dropout": [0.05, 0.1, 0.15, 0.2],
-            "optimizer": ["adam", "rmsprop"],
-            "learning_rate": [3e-4, 5e-4, 8e-4, 1e-3, 2e-3],
-            "peso_classe_0": [0.75, 1.0, 1.25, 1.5],
-            "dense_units": [32, 48, 64],
-            "max_trials": 20,
-            "search_epochs": 55,
+            "dropout": [0.05, 0.1, 0.15],
+            "optimizer": ["adam"],
+            "learning_rate": [1e-3, 2e-3, 3e-3],
+            "peso_classe_0": [1.0],
+            "max_trials": 5,
+            "search_epochs": 45,
         }
 
         # Restricoes de quantizacao para alinhamento com FPGA (Q1.7).
@@ -130,7 +128,6 @@ class Config:
         self.SEARCH_OPTIMIZERS = active_space["optimizer"]
         self.SEARCH_LR_VALUES = active_space["learning_rate"]
         self.SEARCH_PESO_C0_VALUES = active_space["peso_classe_0"]
-        self.SEARCH_DENSE_UNITS = active_space.get("dense_units", [16, 32, 64])
         self.TUNER_MAX_TRIALS = active_space["max_trials"]
         self.SEARCH_EPOCHS = active_space["search_epochs"]
 

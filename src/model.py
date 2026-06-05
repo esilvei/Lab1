@@ -3,13 +3,16 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from src.quantization import Q17ClipConstraint
 
+
 def build_tiny_cnn(hp, num_classes, cfg):
     weight_constraint = None
     if cfg.ENABLE_HARD_WEIGHT_CONSTRAINT_DURING_TRAIN:
         weight_constraint = Q17ClipConstraint(cfg.QUANT_FRAC_BITS)
+
     model = keras.Sequential()
     model.add(layers.Input(shape=(cfg.IMG_SIZE, cfg.IMG_SIZE, cfg.CHANNELS)))
 
+    # 1. Camada Conv2D
     model.add(layers.Conv2D(
         filters=4,
         kernel_size=(3, 3),
@@ -21,22 +24,17 @@ def build_tiny_cnn(hp, num_classes, cfg):
         name='conv2d_hardware'
     ))
 
+    # 2. Camada Pooling
     model.add(layers.MaxPooling2D(pool_size=(2, 2)))
     model.add(layers.Flatten())
 
+    # 3. Dropout para regularização do treino
     hp_dropout = hp.Choice('dropout', values=cfg.SEARCH_DROPOUT_VALUES)
     model.add(layers.Dropout(rate=hp_dropout))
 
-    dense_units = hp.Choice('dense_units', values=getattr(cfg, 'SEARCH_DENSE_UNITS', [16, 32, 64]))
-    model.add(layers.Dense(
-        dense_units,
-        activation='relu',
-        kernel_constraint=weight_constraint,
-        bias_constraint=weight_constraint,
-        name='dense_hidden'
-    ))
-    model.add(layers.Dropout(rate=min(0.5, hp_dropout)))
+    # CAMADA DENSE OCULTA REMOVIDA DAQUI!
 
+    # 4. Camada Dense (FC) de Classificação
     model.add(layers.Dense(
         num_classes,
         activation='softmax',
